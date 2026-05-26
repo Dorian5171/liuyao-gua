@@ -1186,7 +1186,7 @@ pre{white-space:pre-wrap;font-family:'Noto Serif SC',serif;font-size:.85rem;colo
 </div>
 <div class="history-panel-tools">
 <button class="history-btn-sm" onclick="toggleAddRecord()">＋ 新增卦例</button>
-<button class="history-btn-sm" onclick="syncHistoryToGitHub()">☁ 同步到 GitHub</button>
+<span style="font-size:.7rem;color:var(--text-muted);display:flex;align-items:center;gap:.2rem" id="syncStatus">🔄 自动同步中…</span>
 <button class="history-btn-sm danger" onclick="clearAllHistory()">清空全部</button>
 </div>
 <div id="addRecordForm" class="hidden" style="padding:.6rem 1rem;border-bottom:1px solid rgba(26,23,18,0.06);">
@@ -1835,6 +1835,7 @@ const HISTORY_KEY='liuyao_history_v1';
 const HISTORY_PWD='5171Dorian';
 let historyUnlocked=false;
 let historyRecords=[];
+let syncInProgress=false;
 
 function loadHistoryRecords(){
   try{historyRecords=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch(e){historyRecords=[]}
@@ -1864,14 +1865,18 @@ function verifyPassword(){
   }
 }
 
-function openHistoryPanel(){
+async function openHistoryPanel(){
   loadHistoryRecords();
   renderHistoryList();
   $('historyPanel').classList.add('open');
+  // 自动从GitHub拉取远程记录
+  await fetchAndMergeGitHubHistory();
 }
 function closeHistoryPanel(){$('historyPanel').classList.remove('open');$('addRecordForm').classList.add('hidden')}
 
 function toggleAddRecord(){$('addRecordForm').classList.toggle('hidden')}
+
+function setSyncStatus(msg){const el=$('syncStatus');if(el)el.textContent=msg}
 
 function manualAddRecord(){
   const title=$('addTitle').value.trim()||'手动卦例';
@@ -1895,8 +1900,8 @@ function manualAddRecord(){
   saveHistoryRecords();
   renderHistoryList();
   toggleAddRecord();
-  // 清空表单
   ['addTitle','addQuestion','addBenGua','addBianGua','addPalace','addMoving','addNotes'].forEach(id=>{if($(id))$(id).value=''});
+  autoPushToGitHub();
 }
 
 function deleteHistoryRecord(id){
@@ -1904,12 +1909,14 @@ function deleteHistoryRecord(id){
   historyRecords=historyRecords.filter(r=>r.id!==id);
   saveHistoryRecords();
   renderHistoryList();
+  autoPushToGitHub();
 }
 function clearAllHistory(){
   if(!confirm('确定清空全部历史记录？此操作不可撤销。'))return;
   historyRecords=[];
   saveHistoryRecords();
   renderHistoryList();
+  autoPushToGitHub();
 }
 
 function autoSaveHistoryRecord(){
@@ -1942,93 +1949,69 @@ function autoSaveHistoryRecord(){
     notes:'',
     source:'auto'
   };
-  // 避免短时间内重复保存相同记录
   const lastAuto=historyRecords.find(r=>r.source==='auto');
   if(lastAuto&&record.benGua===lastAuto.benGua&&record.question===lastAuto.question&&Date.now()-lastAuto.id<5000)return;
   historyRecords.unshift(record);
   if(historyRecords.length>200)historyRecords=historyRecords.slice(0,200);
   saveHistoryRecords();
+  autoPushToGitHub();
 }
 
-function renderHistoryList(){
-  const wrap=$('historyListWrap');
-  const empty=$('historyEmpty');
-  if(!wrap)return;
-  let html='';
-  const cn={career:'事业',wealth:'财运',love:'感情',health:'健康',exam:'考试',legal:'官司',travel:'出行',other:'其他'};
-  historyRecords.forEach(r=>{
-    const cat=cn[r.category]||r.category||'未知';
-    const mov=r.movingLines&&r.movingLines.length>0?r.movingLines.join(',')+'爻动':'静卦';
-    const bg=r.benGua||'未知';
-    const bb=r.bianGua?' → '+r.bianGua:'';
-    const src=r.source==='manual'?'📝 ':'🤖 ';
-    html+=`<div class="history-item">
-<div class="hi-header">
-<span class="hi-date">${r.date||''}</span>
-<button class="hi-del" onclick="event.stopPropagation();deleteHistoryRecord(${r.id})" title="删除">🗑</button>
-</div>
-<div class="hi-gua">${src}${bg}${bb} · ${r.palace||''} · ${mov}</div>
-<div class="hi-question" title="${(r.question||'').replace(/"/g,'&quot;')}">${r.question||''}</div>
-<div class="hi-meta">
-<span>${cat}</span>
-<span>${r.gender==='male'?'男':r.gender==='female'?'女':'未知'}</span>
-<span>${r.method==='coin'?'手动摇卦':r.method==='time'?'时间起卦':r.method==='manual'?'手动录入':r.method||''}</span>
-</div>`;
-    if(r.notes)html+=`<div style="font-size:.68rem;color:var(--text-muted);margin-top:.15rem;">${r.notes.slice(0,60)}${r.notes.length>60?'...':''}</div>`;
-    html+=`</div>`;
-  });
-  if(html===''){empty.classList.remove('hidden');wrap.innerHTML=''}else{empty.classList.add('hidden');wrap.innerHTML=html}
-}
-
-// ===== GitHub 同步（通过 GitHub API） =====
-async function syncHistoryToGitHub(){
-  const token=localStorage.getItem('liuyao_gh_token')||'';
-  if(!token){
-    const t=prompt('请输入 GitHub Personal Access Token\n（需有 repo 权限，在 https://github.com/settings/tokens 创建）\n\n留空则取消同步');
-    if(!t||!t.trim())return;
-    localStorage.setItem('liuyao_gh_token',t.trim());
-  }
-  const realToken=localStorage.getItem('liuyao_gh_token');
-  const owner='dorian5171';
-  const repo='liuyao-gua';
-  const today=new Date().toISOString().slice(0,10);
-  const filename=`history/${today}.json`;
-  // 先尝试获取已有文件
-  let existingData=[];
+// ===== 自动从GitHub拉取（无需Token，公开仓库可读） =====
+async function fetchAndMergeGitHubHistory(){
+  if(syncInProgress)return;
+  syncInProgress=true;
+  setSyncStatus('🔄 同步中…');
   try{
-    const getResp=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filename}`,{
-      headers:{'Authorization':'Bearer '+realToken,'Accept':'application/vnd.github.v3+json'}
-    });
-    if(getResp.ok){
-      const getData=await getResp.json();
-      existingData=JSON.parse(atob(getData.content));
+    const resp=await fetch('https://raw.githubusercontent.com/dorian5171/liuyao-gua/master/history/records.json');
+    if(!resp.ok){setSyncStatus('📋 本地模式');syncInProgress=false;return}
+    const remoteRecords=await resp.json();
+    if(!Array.isArray(remoteRecords)){setSyncStatus('📋 本地模式');syncInProgress=false;return}
+    const merged=mergeHistoryRecords(remoteRecords,historyRecords);
+    if(merged.length!==historyRecords.length||JSON.stringify(merged)!==JSON.stringify(historyRecords)){
+      historyRecords=merged;
+      saveHistoryRecords();
+      renderHistoryList();
     }
-  }catch(e){}
-  // 合并数据
-  const merged=mergeHistoryRecords(existingData,historyRecords);
-  const content=btoa(unescape(encodeURIComponent(JSON.stringify(merged,null,2))));
-  const body={message:`更新占卜历史 ${today}`,content:content};
-  // 检查是否已存在文件
-  let sha='';
+    setSyncStatus('✅ 已同步');
+  }catch(e){setSyncStatus('⚠ 离线模式')}
+  syncInProgress=false;
+}
+
+// ===== 自动推送到GitHub（需配置Token） =====
+async function autoPushToGitHub(){
+  const token=localStorage.getItem('liuyao_gh_token')||'';
+  if(!token){setSyncStatus('🔑 未配置Token');return}
+  setSyncStatus('🔄 保存中…');
   try{
-    const checkResp=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filename}`,{
-      headers:{'Authorization':'Bearer '+realToken,'Accept':'application/vnd.github.v3+json'}
-    });
-    if(checkResp.ok){const cd=await checkResp.json();sha=cd.sha;body.sha=sha}
-  }catch(e){}
-  try{
-    const putResp=await fetch(`https://api.github.com/repos/${owner}/${repo}/contents/${filename}`,{
-      method:'PUT',headers:{'Authorization':'Bearer '+realToken,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
+    const filename='history/records.json';
+    const content=btoa(unescape(encodeURIComponent(JSON.stringify(historyRecords,null,2))));
+    const body={message:'更新占卜历史记录',content:content};
+    // 获取已有文件的SHA
+    let sha='';
+    try{
+      const checkResp=await fetch(`https://api.github.com/repos/dorian5171/liuyao-gua/contents/${filename}`,{
+        headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json'}
+      });
+      if(checkResp.ok){const cd=await checkResp.json();sha=cd.sha;body.sha=sha}
+    }catch(e){}
+    const putResp=await fetch(`https://api.github.com/repos/dorian5171/liuyao-gua/contents/${filename}`,{
+      method:'PUT',
+      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
       body:JSON.stringify(body)
     });
-    if(putResp.ok){alert('✅ 历史记录已同步到 GitHub！\n文件：history/'+today+'.json')}
-    else{const err=await putResp.json();alert('❌ 同步失败：'+(err.message||'未知错误'))}
-  }catch(e){alert('❌ 同步失败：'+e.message)}
+    if(putResp.ok){setSyncStatus('✅ 已同步')}
+    else{const err=await putResp.json();
+      if(err.message&&err.message.includes('Bad credentials')){localStorage.removeItem('liuyao_gh_token');setSyncStatus('🔑 Token无效');}
+      else{setSyncStatus('⚠ 同步失败')}
+    }
+  }catch(e){setSyncStatus('⚠ 网络错误')}
 }
-function mergeHistoryRecords(existing,current){
+
+function mergeHistoryRecords(remote,local){
   const map={};
-  existing.forEach(r=>{map[r.id]=r});
-  current.forEach(r=>{map[r.id]=r});
+  remote.forEach(r=>{if(r.id)map[r.id]=r});
+  local.forEach(r=>{if(r.id)map[r.id]=r});
   return Object.values(map).sort((a,b)=>b.id-a.id);
 }
 
@@ -2039,7 +2022,6 @@ loadHistoryRecords();
 const _origStartDivination=startDivination;
 startDivination=function(){
   _origStartDivination.apply(this,arguments);
-  // 延迟保存，等排盘结果生成
   const _origRenderResult=renderResult;
   renderResult=function(result,isEdit){
     _origRenderResult.call(this,result,isEdit);
