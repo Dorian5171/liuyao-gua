@@ -397,6 +397,16 @@ textarea{min-height:70px;resize:vertical}
 .toss-yao-move-mark.circle{color:var(--cinnabar-light);text-shadow:0 0 4px rgba(179,69,53,0.2)}
 .toss-yao-move-mark.xmark{color:var(--cinnabar-light);text-shadow:0 0 4px rgba(179,69,53,0.2)}
 
+.manual-hex-selector{
+  display:flex;flex-direction:column;align-items:center;gap:.3rem;
+}
+.manual-hex-row{cursor:pointer;user-select:none;transition:border-color .2s,box-shadow .2s}
+.manual-hex-row:hover{border-color:var(--gold-dim);box-shadow:0 0 8px rgba(26,23,18,0.08)}
+.manual-hex-overlay{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  opacity:0;cursor:pointer;
+}
+
 .num-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7rem}
 .num-input input{text-align:center;font-size:1.3rem}
 
@@ -1005,11 +1015,6 @@ pre{white-space:pre-wrap;font-family:'Noto Serif SC',serif;font-size:.85rem;colo
 <label class="option-card"><input type="radio" name="method" value="time"><div class="icon">🕐</div><div class="name">时间起卦</div></label>
 <label class="option-card"><input type="radio" name="method" value="manual"><div class="icon">📋</div><div class="name">已有卦象</div></label>
 </div>
-<div id="methodManualInput" class="hidden" style="margin-top:.8rem;">
-<label>输入已有卦象（从下到上，1=阳 0=阴；可选动爻位1-6，逗号分隔）</label>
-<input type="text" id="manualHexInput" placeholder="例：111111">
-<input type="text" id="manualMovingInput" placeholder="动爻位（可选），例：2,5" style="margin-top:.5rem;">
-</div>
 <div class="btn-group" style="justify-content:space-between;">
 <button class="btn btn-outline" onclick="prevStep()">← 上一步</button>
 <button class="btn btn-primary" onclick="nextStep()">下一步</button>
@@ -1077,6 +1082,23 @@ pre{white-space:pre-wrap;font-family:'Noto Serif SC',serif;font-size:.85rem;colo
 <div class="btn-group" style="justify-content:space-between;">
 <button class="btn btn-outline" onclick="prevStep()">← 上一步</button>
 <button class="btn btn-primary hidden" id="tossDoneBtn" onclick="finishCoinToss()">排盘分析 →</button>
+</div></div></div>
+
+<div class="step" id="step-manualhex">
+<div class="card">
+<div class="step-title"><span class="num">📋</span>设置卦象</div>
+<p class="guide-text">每爻下拉选择类型（从初爻到上爻，自下而上）</p>
+<div class="manual-hex-selector">
+  <div class="toss-item manual-hex-row" data-idx="5"><span class="toss-yao-label">上爻</span><div class="toss-yao-bar"><div class="yang-line"></div></div><select class="manual-hex-overlay" data-idx="5" onchange="onManualLineChange(this)"><option value="7">少阳  ━━━</option><option value="9">老阳  ━━━ ○</option><option value="8">少阴  ━  ━</option><option value="6">老阴  ━  ━ ×</option></select></div>
+  <div class="toss-item manual-hex-row" data-idx="4"><span class="toss-yao-label">五爻</span><div class="toss-yao-bar"><div class="yang-line"></div></div><select class="manual-hex-overlay" data-idx="4" onchange="onManualLineChange(this)"><option value="7">少阳  ━━━</option><option value="9">老阳  ━━━ ○</option><option value="8">少阴  ━  ━</option><option value="6">老阴  ━  ━ ×</option></select></div>
+  <div class="toss-item manual-hex-row" data-idx="3"><span class="toss-yao-label">四爻</span><div class="toss-yao-bar"><div class="yang-line"></div></div><select class="manual-hex-overlay" data-idx="3" onchange="onManualLineChange(this)"><option value="7">少阳  ━━━</option><option value="9">老阳  ━━━ ○</option><option value="8">少阴  ━  ━</option><option value="6">老阴  ━  ━ ×</option></select></div>
+  <div class="toss-item manual-hex-row" data-idx="2"><span class="toss-yao-label">三爻</span><div class="toss-yao-bar"><div class="yang-line"></div></div><select class="manual-hex-overlay" data-idx="2" onchange="onManualLineChange(this)"><option value="7">少阳  ━━━</option><option value="9">老阳  ━━━ ○</option><option value="8">少阴  ━  ━</option><option value="6">老阴  ━  ━ ×</option></select></div>
+  <div class="toss-item manual-hex-row" data-idx="1"><span class="toss-yao-label">二爻</span><div class="toss-yao-bar"><div class="yang-line"></div></div><select class="manual-hex-overlay" data-idx="1" onchange="onManualLineChange(this)"><option value="7">少阳  ━━━</option><option value="9">老阳  ━━━ ○</option><option value="8">少阴  ━  ━</option><option value="6">老阴  ━  ━ ×</option></select></div>
+  <div class="toss-item manual-hex-row" data-idx="0"><span class="toss-yao-label">初爻</span><div class="toss-yao-bar"><div class="yang-line"></div></div><select class="manual-hex-overlay" data-idx="0" onchange="onManualLineChange(this)"><option value="7">少阳  ━━━</option><option value="9">老阳  ━━━ ○</option><option value="8">少阴  ━  ━</option><option value="6">老阴  ━  ━ ×</option></select></div>
+</div>
+<div class="btn-group" style="justify-content:space-between;">
+<button class="btn btn-outline" onclick="showStep(4)">← 上一步</button>
+<button class="btn btn-primary" onclick="goToConfirmFromManual()">下一步 →</button>
 </div></div></div>
 
 <div class="step" id="step-result">
@@ -1243,7 +1265,7 @@ function getTianGan(hexBin,lineIdx){const lo=NAJIA[hexBin.slice(0,3)],hi=NAJIA[h
 function getXunKong(dayStem,dayBranch){const si=HS.indexOf(dayStem),bi=EB.indexOf(dayBranch);if(si<0||bi<0)return{xunShou:'?',kongWang:[]};const xbi=(bi-si+12)%12;return{xunShou:HS[0]+EB[xbi],kongWang:[EB[(xbi+10)%12],EB[(xbi+11)%12]]}}
 
 // ===== STATE =====
-const st={step:0,category:'career',question:'',method:'coin',timeSource:'now',time:null,gender:'male',userName:'',coinTosses:[],tossCount:0,isTossing:false,result:null,manualPan:null,skillFullText:'',manualGanzhi:null,aiSession:null};
+const st={step:0,category:'career',question:'',method:'coin',timeSource:'now',time:null,gender:'male',userName:'',coinTosses:[],tossCount:0,isTossing:false,result:null,manualPan:null,skillFullText:'',manualGanzhi:null,aiSession:null,manualHexLines:null};
 const SS=['welcome','question','time','gender','method','confirm'];
 function $(id){return document.getElementById(id)}
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
@@ -1251,9 +1273,10 @@ function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
 function showStep(idx){
   st.step=idx;
   SS.forEach((s,i)=>{const e=$('step-'+s);if(e)e.classList.toggle('active',i===idx)});
-  ['step-cointoss','step-result'].forEach(id=>{const e=$(id);if(e)e.classList.remove('active')});
+  ['step-cointoss','step-result','step-manualhex'].forEach(id=>{const e=$(id);if(e)e.classList.remove('active')});
   if(idx===6&&st.method==='coin'){const e=$('step-cointoss');if(e)e.classList.add('active')}
-  if(idx>=7){const e=$('step-result');if(e)e.classList.add('active')}
+  if(idx===8){const e=$('step-manualhex');if(e)e.classList.add('active');initManualHexLines()}
+  if(idx>=7&&idx!==8){const e=$('step-result');if(e)e.classList.add('active')}
   updateProgress();scrollToTop();
 }
 function updateProgress(){const bar=$('progressBar');bar.innerHTML='';for(let i=0;i<SS.length;i++)bar.innerHTML+=`<span class="prog-dot ${i<st.step?'done':i===st.step?'active':''}"></span>`}
@@ -1264,15 +1287,14 @@ function nextStep(){
   if(st.step===3){st.gender=document.querySelector('input[name="gender"]:checked')?.value||'male';st.userName=$('userName').value.trim()}
   if(st.step===4){
     const m=document.querySelector('input[name="method"]:checked');st.method=m?m.value:'coin';
-    if(st.method==='manual'){const h=$('manualHexInput').value.trim();if(!h||h.length!==6||!/^[01]{6}$/.test(h)){alert('请输入有效的6位二进制数');return}}
   }
-  if(st.step===4&&st.method==='manual'){updateConfirm();showStep(5);return}
+  if(st.step===4&&st.method==='manual'){initManualHexLines();showStep(8);return}
   const ni=st.step+1;
   if(ni===5)updateConfirm();
   if(ni<SS.length)showStep(ni);
   else{if(st.method==='coin'){initCoinToss();showStep(6)}else startDivination()}
 }
-function prevStep(){if(st.step===6||st.step===7){showStep(5);return}if(st.step>0)showStep(st.step-1)}
+function prevStep(){if(st.step===8){showStep(4);return}if(st.step===6||st.step===7){showStep(5);return}if(st.step>0)showStep(st.step-1)}
 function updateConfirm(){
   const cn={career:'事业工作',wealth:'财运投资',love:'婚姻感情',health:'健康疾病',exam:'考试学业',legal:'官司诉讼',travel:'出行迁徙',other:'其他'};
   const mn={coin:'手动摇卦',time:'时间起卦',manual:'已有卦象'};
@@ -1296,6 +1318,12 @@ function finishCoinToss(){if(st.coinTosses.length!==6){alert('需完成六次');
 function sym(v){return v===9?'━━━':v===7?'━━━':v===8?'━ ━':v===6?'━ ━':'?'}
 function label(v){return v===9?'老阳':v===7?'少阳':v===8?'少阴':v===6?'老阴':''}
 
+// ===== MANUAL HEXAGRAM LINE SELECTOR =====
+function initManualHexLines(){st.manualHexLines=[7,7,7,7,7,7];renderManualHexLines()}
+function onManualLineChange(sel){const idx=parseInt(sel.dataset.idx);if(isNaN(idx))return;st.manualHexLines[idx]=parseInt(sel.value);renderManualHexLines()}
+function renderManualHexLines(){const yn=['初爻','二爻','三爻','四爻','五爻','上爻'];for(let i=0;i<6;i++){const v=st.manualHexLines[i],isYang=(v===7||v===9),isMove=(v===9||v===6);const row=document.querySelector(`.manual-hex-row[data-idx="${i}"]`);if(!row)continue;const bar=row.querySelector('.toss-yao-bar');if(bar)bar.innerHTML=isYang?'<div class="yang-line"></div>':'<div class="yin-line"><span></span><span></span></div>';let mk=row.querySelector('.toss-yao-move-mark');if(isMove){if(!mk){mk=document.createElement('span');mk.className='toss-yao-move-mark';row.appendChild(mk)}mk.className='toss-yao-move-mark '+(isYang?'circle':'xmark');mk.textContent=isYang?'○':'×';mk.style.display=''}else if(mk)mk.style.display='none';let cls='toss-item manual-hex-row';if(isMove)cls+=' changing';else if(isYang)cls+=' yang';row.className=cls;const sel=row.querySelector('.manual-hex-overlay');if(sel)sel.value=v}}
+function goToConfirmFromManual(){if(!st.manualHexLines||st.manualHexLines.length!==6){alert('请完成六爻设置');return}updateConfirm();showStep(5)}
+
 const LUNAR_DATA=[0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,0x06566,0x0d4a0,0x0ea50,0x16a95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x05ac0,0x0ab60,0x096d5,0x092e0,0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06aa0,0x1a6c4,0x0aae0,0x092e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a4d0,0x0d150,0x0f252,0x0d520];
 function lunarDays(y){let d=348,i;const v=LUNAR_DATA[y-1900];for(i=0x8000;i>0x8;i>>=1)d+=(v&i)?1:0;return d+((v&0xf)?((v&0x10000)?30:29):0)}
 function leapMonth(y){return LUNAR_DATA[y-1900]&0xf}
@@ -1303,7 +1331,7 @@ function monthDays(y,m){return(LUNAR_DATA[y-1900]&(0x10000>>m))?30:29}
 function gregorianToLunar(d){let y=d.getFullYear(),m=d.getMonth()+1,dd=d.getDate();let offset=Math.floor((new Date(y,m-1,dd).getTime()-new Date(1900,0,31).getTime())/864e5);let ly,lm,ld,isLeap=0;for(ly=1900;ly<2101&&offset>0;ly++)offset-=lunarDays(ly);if(offset<0){offset+=lunarDays(--ly);}for(lm=1;lm<13;lm++){let leap=leapMonth(ly),ds=monthDays(ly,lm);if(leap>0&&lm===leap+1&&!isLeap){lm--;isLeap=1;ds=(LUNAR_DATA[ly-1900]&0x10000)?30:29}else if(offset>=ds){offset-=ds;if(isLeap&&lm===leap)isLeap=0}else break}ld=offset+1;if (isLeap && lm > leap) lm--;return{year:ly, month:lm, day:ld, leap:!!isLeap}}
 
 function doTimeDivination(){const now=st.time||new Date();const h=now.getHours();const lunar=gregorianToLunar(now);const yz=((lunar.year-4)%12+12)%12+1;const hz=Math.floor(((h+1)%24)/2)+1;const tri=['','111','110','101','100','011','010','001','000'];const upI=(yz+lunar.month+lunar.day)%8||8,loI=(yz+lunar.month+lunar.day+hz)%8||8,mvI=(yz+lunar.month+lunar.day+hz)%6||6;const hex=tri[loI]+tri[upI],lines=hex.split('').map(Number);const movePos=mvI-1;const toss=lines.map((b,i)=>i===movePos?(b?9:6):(b?7:8));performDivination(toss)}
-function doManualDivination(){const s=$('manualHexInput').value.trim(),movingRaw=$('manualMovingInput').value.trim();if(!/^[01]{6}$/.test(s)){alert('无效输入');return}const moving=(movingRaw?movingRaw.split(',').map(v=>parseInt(v.trim(),10)).filter(v=>v>=1&&v<=6):[]),movingSet=new Set(moving.map(v=>v-1));const toss=s.split('').map((b,i)=>movingSet.has(i)?(b==='1'?9:6):(b==='1'?7:8));performDivination(toss)}
+function doManualDivination(){if(!st.manualHexLines||st.manualHexLines.length!==6){alert('请完成六爻设置');return}const toss=[...st.manualHexLines];performDivination(toss)}
 function startDivination(){if(st.method==='coin'){if(st.coinTosses.length!==6){initCoinToss();showStep(6);return}performDivination(st.coinTosses)}else if(st.method==='time')doTimeDivination();else if(st.method==='manual')doManualDivination()}
 
 function getElRel(b,o){if(b===o)return'same';const g={'木':'火','火':'土','土':'金','金':'水','水':'木'},ov={'木':'土','土':'水','水':'火','火':'金','金':'木'};if(g[b]===o)return'generate';if(ov[b]===o)return'overcome';if(g[o]===b)return'generatedBy';if(ov[o]===b)return'overcomeBy';return''}
@@ -1810,7 +1838,7 @@ function nextAnswerVer(n){
 
 function toggleDebug(){const e=$('debugPrompt');e.style.display=e.style.display==='none'?'block':'none'}
 function saveResultBtn(){const r=st.result;if(!r)return;const gz=st.manualGanzhi||{yearStem:r.yearStem,yearBranch:r.yearBranch,monthStem:r.monthStem,monthBranch:r.monthBranch,dayStem:r.dayStem,dayBranch:r.dayBranch,hourStem:r.hourStem,hourBranch:r.hourBranch};const now=new Date();const lines=['=== 六爻卜筮记录 ===','占卜：'+now.toLocaleString(),'问题：'+st.question,'类别：'+st.category,'性别：'+(st.gender==='male'?'男':'女'),'本卦：'+r.hexInfo.name+'（'+r.palace+'）',r.changedHex?'变卦：'+r.changedHex.name:'',r.huHex?'互卦：'+r.huHex.name:'','动爻：'+(r.movingLines.join(',')||'无'),'干支：'+gz.yearStem+gz.yearBranch+'年 '+gz.monthStem+gz.monthBranch+'月 '+gz.dayStem+gz.dayBranch+'日 '+gz.hourStem+gz.hourBranch+'时','','--- AI 对话记录 ---'];let chatText='';if(st.aiSession){const sess=st.aiSession;sess.versions.forEach((ver,i)=>{if(ver.text&&ver.text!=='__loading__'){chatText+='\n=== 分析版本'+(i+1)+' ===\n'+ver.text+'\n';ver.followUps.forEach(f=>{if(f.question&&f.answerVersions){chatText+='\n[追问] '+f.question+'\n';f.answerVersions.forEach((v,j)=>{if(v.text&&v.text!=='__loading__')chatText+='[回答'+(f.answerVersions.length>1?'版本'+(j+1):'')+'] '+v.text+'\n'})}})}})}else{chatText=$('aiAnalysisContent').textContent||'（无）'}lines.push(chatText,'','--- 仅供参考 ---');const b=new Blob([lines.filter(Boolean).join('\n')],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='六爻卜筮_'+new Date().toISOString().slice(0,10)+'.txt';a.click();URL.revokeObjectURL(a.href)}
-function resetAll(){Object.assign(st,{step:0,category:'career',question:'',method:'coin',timeSource:'now',time:null,gender:'male',userName:'',coinTosses:[],tossCount:0,result:null,manualPan:null,manualGanzhi:null,aiSession:null});$('questionInput').value='';$('manualHexInput').value='';$('manualMovingInput').value='';showStep(0)}
+function resetAll(){Object.assign(st,{step:0,category:'career',question:'',method:'coin',timeSource:'now',time:null,gender:'male',userName:'',coinTosses:[],tossCount:0,result:null,manualPan:null,manualGanzhi:null,aiSession:null,manualHexLines:null});$('questionInput').value='';showStep(0)}
 
 // ===== 历史记录模块 =====
 const HISTORY_KEY='liuyao_history_v1';
@@ -1949,9 +1977,8 @@ loadHistoryRecords();
 
 // ===== UI SELECTION =====
 document.querySelectorAll('.option-card').forEach(card=>{
-  card.addEventListener('click',function(){const g=this.closest('.card-grid');if(g){g.querySelectorAll('.option-card').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')}const r=this.querySelector('input[type="radio"]');if(r)r.checked=true;$('methodManualInput').classList.toggle('hidden',!(document.querySelector('input[name="method"]:checked')?.value==='manual'))})
+  card.addEventListener('click',function(){const g=this.closest('.card-grid');if(g){g.querySelectorAll('.option-card').forEach(c=>c.classList.remove('selected'));this.classList.add('selected')}const r=this.querySelector('input[type="radio"]');if(r)r.checked=true})
 })
-document.querySelector('input[name="method"][value="manual"]')?.addEventListener('change',function(){$('methodManualInput').classList.toggle('hidden',!this.checked)})
 ['specYear','specMonth','specDay','specHour'].forEach(id=>{$(id)?.addEventListener('input',clampSpecDate);$(id)?.addEventListener('change',clampSpecDate)});
 clampSpecDate();
 
