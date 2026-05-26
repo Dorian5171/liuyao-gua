@@ -358,20 +358,44 @@ textarea{min-height:70px;resize:vertical}
   text-shadow:0 0 3px rgba(160,120,60,0.35);
 }
 .coin.flipping{animation:coinFlip .5s ease-in-out}
+.coin.flipping-continuous{animation:coinFlip .5s ease-in-out infinite}
 @keyframes coinFlip{0%{transform:rotateY(0deg) scale(1)}25%{transform:rotateY(180deg) scale(1.05)}50%{transform:rotateY(360deg) scale(1)}75%{transform:rotateY(540deg) scale(1.05)}100%{transform:rotateY(720deg) scale(1)}}
 
-.toss-history{display:flex;gap:.5rem;justify-content:center;margin-top:1rem;flex-wrap:wrap}
+.toss-history{display:flex;flex-direction:column;align-items:center;gap:.3rem;margin-top:1rem}
 .toss-item{
-  width:38px;height:38px;border-radius:6px;
   display:flex;align-items:center;justify-content:center;
-  font-size:1.1rem;font-weight:700;
+  min-width:220px;height:2.2rem;padding:.3rem 2.8rem;border-radius:6px;
+  position:relative;
   background:linear-gradient(180deg,rgba(248,242,228,0.82),rgba(240,233,215,0.90));
   border:1px solid rgba(26,23,18,0.11);
 }
-.toss-item.yang{color:var(--gold);border-color:rgba(74,70,64,0.35);box-shadow:0 0 5px rgba(26,23,18,0.07)}
-.toss-item.yin{color:var(--text-dim);border-color:rgba(26,23,18,0.16)}
-/* 变爻：朱砂晕 */
+.toss-yao-label{
+  position:absolute;left:.5rem;top:50%;transform:translateY(-50%);
+  font-size:.75rem;color:var(--text-dim);width:2.5rem;text-align:right;
+  font-family:'Noto Serif SC',serif;
+}
+.toss-yao-bar{width:80px;display:flex;align-items:center;justify-content:center}
+.toss-yao-bar .yang-line{
+  width:80px;height:0;
+  border-bottom:3px solid var(--gold);
+  box-shadow:0 1px 3px rgba(26,23,18,0.12);
+  filter:drop-shadow(0 0.5px 1px rgba(26,23,18,0.10));
+}
+.toss-yao-bar .yin-line{display:flex;gap:10px;justify-content:center}
+.toss-yao-bar .yin-line span{
+  width:35px;height:0;
+  border-bottom:2px solid rgba(74,70,64,0.65);
+  box-shadow:0 1px 2px rgba(26,23,18,0.08);
+}
+.toss-item.yang{box-shadow:0 0 5px rgba(26,23,18,0.07)}
+.toss-item.yin{/* uses default border */}
 .toss-item.changing{box-shadow:0 0 7px var(--cinnabar-dim);border-color:var(--cinnabar)}
+.toss-yao-move-mark{
+  position:absolute;right:.6rem;top:50%;transform:translateY(-50%);
+  font-size:.85rem;font-weight:700;width:20px;text-align:center;
+}
+.toss-yao-move-mark.circle{color:var(--cinnabar-light);text-shadow:0 0 4px rgba(179,69,53,0.2)}
+.toss-yao-move-mark.xmark{color:var(--cinnabar-light);text-shadow:0 0 4px rgba(179,69,53,0.2)}
 
 .num-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.7rem}
 .num-input input{text-align:center;font-size:1.3rem}
@@ -1263,9 +1287,10 @@ function selectGender(v){st.gender=v;$('genderMaleLabel').classList.toggle('acti
 // ===== COIN TOSS =====
 let curToss=null;
 function initCoinToss(){st.coinTosses=[];st.tossCount=0;$('tossHistory').innerHTML='';$('tossCount').textContent='已摇：0 / 6';$('tossStatus').textContent='准备就绪';$('tossBtn').classList.remove('hidden');$('tossBtn').textContent='掷币';$('tossBtn').onclick=tossCoins;$('tossBtn').disabled=false;$('redoBtn').classList.add('hidden');$('tossDoneBtn').classList.add('hidden');resetCoins()}
-function resetCoins(){['coin1','coin2','coin3'].forEach(id=>{const e=$(id);e.textContent='○';e.style.background='linear-gradient(135deg,#e8c560,#c9a040,#b08a30)';e.style.color='#2b2b2b'})}
-function tossCoins(){if(st.isTossing||st.tossCount>=6)return;st.isTossing=true;$('tossBtn').disabled=true;['coin1','coin2','coin3'].forEach(id=>$(id).classList.add('flipping'));$('tossStatus').textContent='掷币中…';const r=[],heads=[];for(let i=0;i<3;i++){const v=Math.random()<0.5;r.push(v?'正':'反');heads.push(v)}const h=heads.filter(Boolean).length;const val=h===3?9:h===2?8:h===1?7:6;curToss={value:val,results:r,heads:h};setTimeout(()=>{['coin1','coin2','coin3'].forEach((id,i)=>{const e=$(id);e.classList.remove('flipping');e.textContent=r[i];if(r[i]==='正'){e.style.background='linear-gradient(135deg,#f0d68a,#c9a040,#b08a30)';e.style.color='#2b2b2b'}else{e.style.background='linear-gradient(135deg,#a0a0a0,#787878,#555)';e.style.color='#ddd'}});$('tossStatus').textContent=`${h}正${3-h}反 → ${sym(val)}（${label(val)}）`;$('redoBtn').classList.remove('hidden');$('tossBtn').textContent='确认 ✓';$('tossBtn').onclick=confirmToss;st.isTossing=false;$('tossBtn').disabled=false},600)}
-function confirmToss(){if(!curToss)return;st.coinTosses.push(curToss.value);st.tossCount++;const it=document.createElement('div');const v=curToss.value;it.className=`toss-item ${(v===7||v===9)?'yang':'yin'} ${(v===9||v===6)?'changing':''}`;it.textContent=sym(v);it.title=`第${st.tossCount}爻: ${label(v)}`;$('tossHistory').appendChild(it);$('tossCount').textContent=`已摇：${st.tossCount} / 6`;curToss=null;$('redoBtn').classList.add('hidden');$('tossBtn').textContent='掷币';$('tossBtn').onclick=tossCoins;resetCoins();if(st.tossCount>=6){$('tossBtn').disabled=true;$('tossBtn').textContent='✓ 完成';$('tossDoneBtn').classList.remove('hidden');$('tossStatus').textContent='六爻已备，点击"排盘分析"'}else $('tossStatus').textContent=`第${st.tossCount}爻完成，继续`}
+function resetCoins(){['coin1','coin2','coin3'].forEach(id=>{const e=$(id);e.classList.remove('flipping','flipping-continuous');e.textContent='○';e.style.background='linear-gradient(135deg,#e8c560,#c9a040,#b08a30)';e.style.color='#2b2b2b'})}
+function tossCoins(){if(st.isTossing||st.tossCount>=6)return;st.isTossing=true;$('tossBtn').textContent='停止 ⏹';$('tossBtn').onclick=stopToss;$('tossBtn').disabled=false;$('tossStatus').textContent='摇晃中，点击停止…';['coin1','coin2','coin3'].forEach(id=>$(id).classList.add('flipping-continuous'))}
+function stopToss(){if(!st.isTossing)return;st.isTossing=false;const r=[],heads=[];for(let i=0;i<3;i++){const v=Math.random()<0.5;r.push(v?'正':'反');heads.push(v)}const h=heads.filter(Boolean).length;const val=h===3?9:h===2?8:h===1?7:6;curToss={value:val,results:r,heads:h};['coin1','coin2','coin3'].forEach((id,i)=>{const e=$(id);e.classList.remove('flipping-continuous');e.textContent=r[i];if(r[i]==='正'){e.style.background='linear-gradient(135deg,#f0d68a,#c9a040,#b08a30)';e.style.color='#2b2b2b'}else{e.style.background='linear-gradient(135deg,#a0a0a0,#787878,#555)';e.style.color='#ddd'}});$('tossStatus').textContent=`${h}正${3-h}反 → ${label(val)}`;$('redoBtn').classList.remove('hidden');$('tossBtn').textContent='确认 ✓';$('tossBtn').onclick=confirmToss}
+function confirmToss(){if(!curToss)return;st.coinTosses.push(curToss.value);st.tossCount++;const v=curToss.value;const isYang=(v===7||v===9);const isMove=(v===9||v===6);const yaoNames=['初爻','二爻','三爻','四爻','五爻','上爻'];const yaoLabel=yaoNames[st.tossCount-1]||'';let barHTML,cls='';if(isYang){barHTML='<div class="yang-line"></div>';cls='yang'}else{barHTML='<div class="yin-line"><span></span><span></span></div>';cls='yin'}if(isMove)cls+=' changing';let moveHTML='';if(isMove){if(isYang)moveHTML='<span class="toss-yao-move-mark circle">○</span>';else moveHTML='<span class="toss-yao-move-mark xmark">×</span>'}const it=document.createElement('div');it.className='toss-item '+cls;it.innerHTML=`<span class="toss-yao-label">${yaoLabel}</span><div class="toss-yao-bar">${barHTML}</div>${moveHTML}`;it.title=`第${st.tossCount}爻: ${label(v)}`;$('tossHistory').prepend(it);$('tossCount').textContent=`已摇：${st.tossCount} / 6`;curToss=null;$('redoBtn').classList.add('hidden');$('tossBtn').textContent='掷币';$('tossBtn').onclick=tossCoins;resetCoins();if(st.tossCount>=6){$('tossBtn').disabled=true;$('tossBtn').textContent='✓ 完成';$('tossDoneBtn').classList.remove('hidden');$('tossStatus').textContent='六爻已备，点击"排盘分析"'}else $('tossStatus').textContent=`第${st.tossCount}爻完成，继续`}
 function redoCoinToss(){curToss=null;$('redoBtn').classList.add('hidden');$('tossBtn').textContent='掷币';$('tossBtn').onclick=tossCoins;$('tossBtn').disabled=false;$('tossStatus').textContent='重摇';resetCoins()}
 function finishCoinToss(){if(st.coinTosses.length!==6){alert('需完成六次');return}performDivination(st.coinTosses)}
 function sym(v){return v===9?'━━━':v===7?'━━━':v===8?'━ ━':v===6?'━ ━':'?'}
