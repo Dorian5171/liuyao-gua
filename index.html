@@ -923,7 +923,6 @@ pre{white-space:pre-wrap;font-family:'Noto Serif SC',serif;font-size:.85rem;colo
 }
 </style>
 </head>
-</head>
 <body>
 <header><h1>六爻卜筮</h1><p>AI 智能排盘 · 经典解卦 · 趋吉避凶</p></header>
 <button class="ai-settings-btn" onclick="toggleSettings()">⚙ AI 设置</button>
@@ -1186,7 +1185,8 @@ pre{white-space:pre-wrap;font-family:'Noto Serif SC',serif;font-size:.85rem;colo
 </div>
 <div class="history-panel-tools">
 <button class="history-btn-sm" onclick="toggleAddRecord()">＋ 新增卦例</button>
-<span style="font-size:.7rem;color:var(--text-muted);display:flex;align-items:center;gap:.2rem" id="syncStatus">🔄 自动同步中…</span>
+<button class="history-btn-sm" onclick="exportHistory()">📥 导出备份</button>
+<button class="history-btn-sm" onclick="importHistory()">📤 导入合并</button>
 <button class="history-btn-sm danger" onclick="clearAllHistory()">清空全部</button>
 </div>
 <div id="addRecordForm" class="hidden" style="padding:.6rem 1rem;border-bottom:1px solid rgba(26,23,18,0.06);">
@@ -1835,7 +1835,6 @@ const HISTORY_KEY='liuyao_history_v1';
 const HISTORY_PWD='5171Dorian';
 let historyUnlocked=false;
 let historyRecords=[];
-let syncInProgress=false;
 
 function loadHistoryRecords(){
   try{historyRecords=JSON.parse(localStorage.getItem(HISTORY_KEY)||'[]')}catch(e){historyRecords=[]}
@@ -1844,191 +1843,149 @@ function loadHistoryRecords(){
 }
 function saveHistoryRecords(){localStorage.setItem(HISTORY_KEY,JSON.stringify(historyRecords));updateBadge()}
 function updateBadge(){
-  const b=$('historyBadge');if(!b)return;
+  var b=document.getElementById('historyBadge');if(!b)return;
   b.textContent=historyRecords.length;
   b.classList.toggle('hidden',historyRecords.length===0);
 }
 
 function toggleHistory(){
-  if(historyUnlocked){openHistoryPanel();return}
-  $('pwdOverlay').classList.add('active');$('pwdInput').value='';$('pwdError').classList.remove('show');
-  setTimeout(()=>$('pwdInput').focus(),100);
+  if(historyUnlocked){doOpenPanel();return}
+  var ov=document.getElementById('pwdOverlay');if(!ov)return;
+  ov.classList.add('active');
+  var inp=document.getElementById('pwdInput');if(inp){inp.value='';setTimeout(function(){inp.focus()},100)}
+  var err=document.getElementById('pwdError');if(err)err.classList.remove('show');
 }
-function closePwdModal(){$('pwdOverlay').classList.remove('active')}
+function closePwdModal(){var ov=document.getElementById('pwdOverlay');if(ov)ov.classList.remove('active')}
 function verifyPassword(){
-  if($('pwdInput').value===HISTORY_PWD){
-    historyUnlocked=true;
-    closePwdModal();
-    openHistoryPanel();
+  var inp=document.getElementById('pwdInput');
+  if(inp&&inp.value===HISTORY_PWD){
+    historyUnlocked=true;closePwdModal();doOpenPanel();
   }else{
-    $('pwdError').classList.add('show');$('pwdInput').value='';$('pwdInput').focus();
+    var err=document.getElementById('pwdError');if(err)err.classList.add('show');
+    if(inp){inp.value='';inp.focus()}
   }
 }
 
-async function openHistoryPanel(){
-  loadHistoryRecords();
-  renderHistoryList();
-  $('historyPanel').classList.add('open');
-  // 自动从GitHub拉取远程记录
-  await fetchAndMergeGitHubHistory();
+function doOpenPanel(){
+  loadHistoryRecords();renderHistoryList();
+  var p=document.getElementById('historyPanel');if(p)p.classList.add('open');
 }
-function closeHistoryPanel(){$('historyPanel').classList.remove('open');$('addRecordForm').classList.add('hidden')}
+function closeHistoryPanel(){
+  var p=document.getElementById('historyPanel');if(p)p.classList.remove('open');
+  var f=document.getElementById('addRecordForm');if(f)f.classList.add('hidden');
+}
 
-function toggleAddRecord(){$('addRecordForm').classList.toggle('hidden')}
-
-function setSyncStatus(msg){const el=$('syncStatus');if(el)el.textContent=msg}
+function toggleAddRecord(){var f=document.getElementById('addRecordForm');if(f)f.classList.toggle('hidden')}
 
 function manualAddRecord(){
-  const title=$('addTitle').value.trim()||'手动卦例';
-  const record={
-    id:Date.now(),
-    date:new Date().toLocaleString('zh-CN'),
-    title:title,
-    question:$('addQuestion').value.trim()||'（未记录问题）',
-    category:$('addCategory').value,
-    gender:'unknown',
-    method:'manual',
-    benGua:$('addBenGua').value.trim()||'未知',
-    bianGua:$('addBianGua').value.trim()||'',
-    huGua:'',
-    palace:$('addPalace').value.trim()||'未知',
-    movingLines:($('addMoving').value.trim()||'').split(',').map(s=>parseInt(s.trim())).filter(n=>n>=1&&n<=6),
-    notes:$('addNotes').value.trim()||'',
-    source:'manual'
+  var title=(document.getElementById('addTitle')||{}).value||'';title=title.trim()||'手动卦例';
+  var record={
+    id:Date.now(),date:new Date().toLocaleString('zh-CN'),title:title,
+    question:(document.getElementById('addQuestion')||{}).value||'',
+    category:(document.getElementById('addCategory')||{}).value||'other',
+    gender:'unknown',method:'manual',
+    benGua:(document.getElementById('addBenGua')||{}).value||'未知',
+    bianGua:(document.getElementById('addBianGua')||{}).value||'',
+    huGua:'',palace:(document.getElementById('addPalace')||{}).value||'未知',
+    movingLines:((document.getElementById('addMoving')||{}).value||'').split(',').map(function(s){return parseInt(s.trim())}).filter(function(n){return n>=1&&n<=6}),
+    notes:(document.getElementById('addNotes')||{}).value||'',source:'manual'
   };
-  historyRecords.unshift(record);
-  saveHistoryRecords();
-  renderHistoryList();
-  toggleAddRecord();
-  ['addTitle','addQuestion','addBenGua','addBianGua','addPalace','addMoving','addNotes'].forEach(id=>{if($(id))$(id).value=''});
-  autoPushToGitHub();
+  historyRecords.unshift(record);saveHistoryRecords();renderHistoryList();toggleAddRecord();
+  ['addTitle','addQuestion','addBenGua','addBianGua','addPalace','addMoving','addNotes'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=''});
 }
 
 function deleteHistoryRecord(id){
-  if(!confirm('确定删除此条记录？此操作不可撤销。'))return;
-  historyRecords=historyRecords.filter(r=>r.id!==id);
-  saveHistoryRecords();
-  renderHistoryList();
-  autoPushToGitHub();
+  if(!confirm('确定删除此条记录？'))return;
+  historyRecords=historyRecords.filter(function(r){return r.id!==id});
+  saveHistoryRecords();renderHistoryList();
 }
 function clearAllHistory(){
-  if(!confirm('确定清空全部历史记录？此操作不可撤销。'))return;
-  historyRecords=[];
-  saveHistoryRecords();
-  renderHistoryList();
-  autoPushToGitHub();
+  if(!confirm('确定清空全部历史记录？'))return;
+  historyRecords=[];saveHistoryRecords();renderHistoryList();
 }
 
 function autoSaveHistoryRecord(){
   if(!st.result)return;
-  const r=st.result;
-  const cn={career:'事业工作',wealth:'财运投资',love:'婚姻感情',health:'健康疾病',exam:'考试学业',legal:'官司诉讼',travel:'出行迁徙',other:'其他'};
-  const record={
-    id:Date.now(),
-    date:new Date().toLocaleString('zh-CN'),
-    title:cn[st.category]||st.category,
-    question:st.question||'（未记录问题）',
-    category:st.category,
-    gender:st.gender||'unknown',
-    method:st.method||'unknown',
-    benGua:r.hexInfo?r.hexInfo.name:'未知',
-    bianGua:r.changedHex?r.changedHex.name:'',
-    huGua:r.huHex?r.huHex.name:'',
-    palace:r.palace||'未知',
-    movingLines:r.movingLines||[],
-    lineBranches:r.lineBranches||[],
-    lineRelatives:r.lineRelatives||[],
-    shiPos:r.shiPos||0,
-    yingPos:r.yingPos||0,
-    yearStem:r.yearStem||'',
-    yearBranch:r.yearBranch||'',
-    monthStem:r.monthStem||'',
-    monthBranch:r.monthBranch||'',
-    dayStem:r.dayStem||'',
-    dayBranch:r.dayBranch||'',
-    notes:'',
-    source:'auto'
-  };
-  const lastAuto=historyRecords.find(r=>r.source==='auto');
+  var r=st.result;
+  var cn={career:'事业工作',wealth:'财运投资',love:'婚姻感情',health:'健康疾病',exam:'考试学业',legal:'官司诉讼',travel:'出行迁徙',other:'其他'};
+  var record={id:Date.now(),date:new Date().toLocaleString('zh-CN'),title:cn[st.category]||st.category,question:st.question||'',category:st.category,gender:st.gender||'unknown',method:st.method||'unknown',benGua:r.hexInfo?r.hexInfo.name:'未知',bianGua:r.changedHex?r.changedHex.name:'',huGua:r.huHex?r.huHex.name:'',palace:r.palace||'未知',movingLines:r.movingLines||[],lineBranches:r.lineBranches||[],lineRelatives:r.lineRelatives||[],shiPos:r.shiPos||0,yingPos:r.yingPos||0,yearStem:r.yearStem||'',yearBranch:r.yearBranch||'',monthStem:r.monthStem||'',monthBranch:r.monthBranch||'',dayStem:r.dayStem||'',dayBranch:r.dayBranch||'',notes:'',source:'auto'};
+  var lastAuto=historyRecords.find(function(x){return x.source==='auto'});
   if(lastAuto&&record.benGua===lastAuto.benGua&&record.question===lastAuto.question&&Date.now()-lastAuto.id<5000)return;
   historyRecords.unshift(record);
   if(historyRecords.length>200)historyRecords=historyRecords.slice(0,200);
   saveHistoryRecords();
-  autoPushToGitHub();
 }
 
-// ===== 自动从GitHub拉取（无需Token，公开仓库可读） =====
-async function fetchAndMergeGitHubHistory(){
-  if(syncInProgress)return;
-  syncInProgress=true;
-  setSyncStatus('🔄 同步中…');
-  try{
-    const resp=await fetch('https://raw.githubusercontent.com/dorian5171/liuyao-gua/master/history/records.json');
-    if(!resp.ok){setSyncStatus('📋 本地模式');syncInProgress=false;return}
-    const remoteRecords=await resp.json();
-    if(!Array.isArray(remoteRecords)){setSyncStatus('📋 本地模式');syncInProgress=false;return}
-    const merged=mergeHistoryRecords(remoteRecords,historyRecords);
-    if(merged.length!==historyRecords.length||JSON.stringify(merged)!==JSON.stringify(historyRecords)){
-      historyRecords=merged;
-      saveHistoryRecords();
-      renderHistoryList();
-    }
-    setSyncStatus('✅ 已同步');
-  }catch(e){setSyncStatus('⚠ 离线模式')}
-  syncInProgress=false;
+function renderHistoryList(){
+  var wrap=document.getElementById('historyListWrap');
+  var empty=document.getElementById('historyEmpty');
+  if(!wrap)return;
+  var html='';
+  var cn={career:'事业',wealth:'财运',love:'感情',health:'健康',exam:'考试',legal:'官司',travel:'出行',other:'其他'};
+  for(var i=0;i<historyRecords.length;i++){
+    var r=historyRecords[i];
+    var cat=cn[r.category]||r.category||'未知';
+    var mov=r.movingLines&&r.movingLines.length>0?r.movingLines.join(',')+'爻动':'静卦';
+    var bg=r.benGua||'未知';
+    var bb=r.bianGua?' → '+r.bianGua:'';
+    var src=r.source==='manual'?'📝 ':'🤖 ';
+    html+='<div class="history-item"><div class="hi-header"><span class="hi-date">'+(r.date||'')+'</span><button class="hi-del" onclick="event.stopPropagation();deleteHistoryRecord('+r.id+')" title="删除">🗑</button></div><div class="hi-gua">'+src+bg+bb+' · '+(r.palace||'')+' · '+mov+'</div><div class="hi-question" title="'+(r.question||'').replace(/"/g,'&quot;')+'">'+(r.question||'')+'</div><div class="hi-meta"><span>'+cat+'</span><span>'+(r.gender==='male'?'男':r.gender==='female'?'女':'未知')+'</span><span>'+(r.method==='coin'?'手动摇卦':r.method==='time'?'时间起卦':r.method==='manual'?'手动录入':r.method||'')+'</span></div>';
+    if(r.notes)html+='<div style="font-size:.68rem;color:var(--text-muted);margin-top:.15rem;">'+r.notes.slice(0,60)+(r.notes.length>60?'...':'')+'</div>';
+    html+='</div>';
+  }
+  if(!html){empty.classList.remove('hidden');wrap.innerHTML=''}else{empty.classList.add('hidden');wrap.innerHTML=html}
 }
 
-// ===== 自动推送到GitHub（需配置Token） =====
-async function autoPushToGitHub(){
-  const token=localStorage.getItem('liuyao_gh_token')||'';
-  if(!token){setSyncStatus('🔑 未配置Token');return}
-  setSyncStatus('🔄 保存中…');
-  try{
-    const filename='history/records.json';
-    const content=btoa(unescape(encodeURIComponent(JSON.stringify(historyRecords,null,2))));
-    const body={message:'更新占卜历史记录',content:content};
-    // 获取已有文件的SHA
-    let sha='';
-    try{
-      const checkResp=await fetch(`https://api.github.com/repos/dorian5171/liuyao-gua/contents/${filename}`,{
-        headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json'}
-      });
-      if(checkResp.ok){const cd=await checkResp.json();sha=cd.sha;body.sha=sha}
-    }catch(e){}
-    const putResp=await fetch(`https://api.github.com/repos/dorian5171/liuyao-gua/contents/${filename}`,{
-      method:'PUT',
-      headers:{'Authorization':'Bearer '+token,'Accept':'application/vnd.github.v3+json','Content-Type':'application/json'},
-      body:JSON.stringify(body)
-    });
-    if(putResp.ok){setSyncStatus('✅ 已同步')}
-    else{const err=await putResp.json();
-      if(err.message&&err.message.includes('Bad credentials')){localStorage.removeItem('liuyao_gh_token');setSyncStatus('🔑 Token无效');}
-      else{setSyncStatus('⚠ 同步失败')}
-    }
-  }catch(e){setSyncStatus('⚠ 网络错误')}
+// ===== 导入导出（跨浏览器同步） =====
+function exportHistory(){
+  if(historyRecords.length===0){alert('暂无记录可导出');return}
+  var data=JSON.stringify(historyRecords,null,2);
+  var blob=new Blob([data],{type:'application/json'});
+  var a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='六爻卦例备份_'+new Date().toISOString().slice(0,10)+'.json';
+  a.click();URL.revokeObjectURL(a.href);
+}
+function importHistory(){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='.json';
+  inp.onchange=function(){
+    var file=inp.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=function(e){
+      try{
+        var imported=JSON.parse(e.target.result);
+        if(!Array.isArray(imported)){alert('文件格式错误');return}
+        var before=historyRecords.length;
+        var map={};
+        historyRecords.forEach(function(r){if(r.id)map[r.id]=r});
+        imported.forEach(function(r){if(r.id)map[r.id]=r});
+        historyRecords=Object.values(map).sort(function(a,b){return b.id-a.id});
+        if(historyRecords.length>200)historyRecords=historyRecords.slice(0,200);
+        saveHistoryRecords();renderHistoryList();
+        alert('导入完成：新增 '+(historyRecords.length-before)+' 条记录（共 '+historyRecords.length+' 条）');
+      }catch(ex){alert('文件解析失败：'+ex.message)}
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
 }
 
-function mergeHistoryRecords(remote,local){
-  const map={};
-  remote.forEach(r=>{if(r.id)map[r.id]=r});
-  local.forEach(r=>{if(r.id)map[r.id]=r});
-  return Object.values(map).sort((a,b)=>b.id-a.id);
-}
-
-// ===== 初始化 =====
 loadHistoryRecords();
 
-// ===== 在排盘完成后自动保存 =====
-const _origStartDivination=startDivination;
-startDivination=function(){
-  _origStartDivination.apply(this,arguments);
-  const _origRenderResult=renderResult;
-  renderResult=function(result,isEdit){
-    _origRenderResult.call(this,result,isEdit);
-    if(!isEdit)autoSaveHistoryRecord();
-    renderResult=_origRenderResult;
+// 自动保存：解卦后挂载
+(function(){
+  var origStart=startDivination;
+  startDivination=function(){
+    origStart.apply(this,arguments);
+    var origRender=renderResult;
+    renderResult=function(result,isEdit){
+      origRender.call(this,result,isEdit);
+      if(!isEdit)autoSaveHistoryRecord();
+      renderResult=origRender;
+    };
   };
-};
+})();
 
 // ===== UI SELECTION =====
 document.querySelectorAll('.option-card').forEach(card=>{
