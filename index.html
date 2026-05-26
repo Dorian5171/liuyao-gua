@@ -1169,9 +1169,8 @@ pre{white-space:pre-wrap;font-family:'Noto Serif SC',serif;font-size:.85rem;colo
 </div>
 </div>
 </div>
-<div class="history-list-wrap" id="historyListWrap">
+<div class="history-list-wrap" id="historyListWrap"></div>
 <div class="history-empty" id="historyEmpty">暂无历史记录<br><span style="font-size:.7rem;">完成解卦后将自动保存</span></div>
-</div>
 </div>
 
 <script src="liuyao-skill-data.js"></script>
@@ -1873,7 +1872,8 @@ function renderHistoryList(){
     if(r.notes)html+='<div style="font-size:.68rem;color:var(--text-muted);margin-top:.15rem;">'+r.notes.slice(0,60)+(r.notes.length>60?'...':'')+'</div>';
     html+='</div>';
   }
-  if(!html){empty.classList.remove('hidden');wrap.innerHTML=''}else{empty.classList.add('hidden');wrap.innerHTML=html}
+  if(html){wrap.innerHTML=html;if(empty)empty.classList.add('hidden')}
+  else{wrap.innerHTML='';if(empty)empty.classList.remove('hidden')}
 }
 
 // ===== 导入导出（跨浏览器同步） =====
@@ -1913,17 +1913,12 @@ function importHistory(){
 
 loadHistoryRecords();
 
-// 自动保存：解卦后挂载
+// 全局钩住 renderResult，自动保存（覆盖手动摇卦/时间起卦/已有卦象）
 (function(){
-  var origStart=startDivination;
-  startDivination=function(){
-    origStart.apply(this,arguments);
-    var origRender=renderResult;
-    renderResult=function(result,isEdit){
-      origRender.call(this,result,isEdit);
-      if(!isEdit)autoSaveHistoryRecord();
-      renderResult=origRender;
-    };
+  var origRender=renderResult;
+  renderResult=function(result,isEdit){
+    origRender.call(this,result,isEdit);
+    if(!isEdit)autoSaveHistoryRecord();
   };
 })();
 
