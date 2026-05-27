@@ -1265,7 +1265,7 @@ function getTianGan(hexBin,lineIdx){const lo=NAJIA[hexBin.slice(0,3)],hi=NAJIA[h
 function getXunKong(dayStem,dayBranch){const si=HS.indexOf(dayStem),bi=EB.indexOf(dayBranch);if(si<0||bi<0)return{xunShou:'?',kongWang:[]};const xbi=(bi-si+12)%12;return{xunShou:HS[0]+EB[xbi],kongWang:[EB[(xbi+10)%12],EB[(xbi+11)%12]]}}
 
 // ===== STATE =====
-const st={step:0,category:'career',question:'',method:'coin',timeSource:'now',time:null,gender:'male',userName:'',coinTosses:[],tossCount:0,isTossing:false,result:null,manualPan:null,skillFullText:'',manualGanzhi:null,aiSession:null,manualHexLines:null};
+const st={step:0,category:'career',question:'',method:'coin',timeSource:'now',time:null,gender:'male',userName:'',coinTosses:[],tossCount:0,isTossing:false,result:null,manualPan:null,skillFullText:'',manualGanzhi:null,aiSession:null,manualHexLines:null,currentHistoryId:null};
 const SS=['welcome','question','time','gender','method','confirm'];
 function $(id){return document.getElementById(id)}
 function scrollToTop(){window.scrollTo({top:0,behavior:'smooth'})}
@@ -1545,6 +1545,7 @@ function applyReviewEdit(){
   const wasAnalyzed=!$('aiAnalysisContent').classList.contains('hidden')||!$('aiChatArea').classList.contains('hidden')||!$('aiLoading').classList.contains('hidden');
   $('aiControls').classList.remove('hidden');$('aiLoading').classList.add('hidden');$('aiError').classList.add('hidden');$('aiAnalysisContent').classList.add('hidden');$('aiChatArea').classList.add('hidden');$('aiFollowUp').classList.add('hidden');st.aiSession=null;
   if(wasAnalyzed)requestAIAnalysis();}
+  autoSaveHistoryRecord();
 }
 
 function toggleReviewEdit(){$('reviewEditArea').classList.toggle('hidden')}
@@ -1838,7 +1839,7 @@ function nextAnswerVer(n){
 
 function toggleDebug(){const e=$('debugPrompt');e.style.display=e.style.display==='none'?'block':'none'}
 function saveResultBtn(){const r=st.result;if(!r)return;const gz=st.manualGanzhi||{yearStem:r.yearStem,yearBranch:r.yearBranch,monthStem:r.monthStem,monthBranch:r.monthBranch,dayStem:r.dayStem,dayBranch:r.dayBranch,hourStem:r.hourStem,hourBranch:r.hourBranch};const now=new Date();const lines=['=== 六爻卜筮记录 ===','占卜：'+now.toLocaleString(),'问题：'+st.question,'类别：'+st.category,'性别：'+(st.gender==='male'?'男':'女'),'本卦：'+r.hexInfo.name+'（'+r.palace+'）',r.changedHex?'变卦：'+r.changedHex.name:'',r.huHex?'互卦：'+r.huHex.name:'','动爻：'+(r.movingLines.join(',')||'无'),'干支：'+gz.yearStem+gz.yearBranch+'年 '+gz.monthStem+gz.monthBranch+'月 '+gz.dayStem+gz.dayBranch+'日 '+gz.hourStem+gz.hourBranch+'时','','--- AI 对话记录 ---'];let chatText='';if(st.aiSession){const sess=st.aiSession;sess.versions.forEach((ver,i)=>{if(ver.text&&ver.text!=='__loading__'){chatText+='\n=== 分析版本'+(i+1)+' ===\n'+ver.text+'\n';ver.followUps.forEach(f=>{if(f.question&&f.answerVersions){chatText+='\n[追问] '+f.question+'\n';f.answerVersions.forEach((v,j)=>{if(v.text&&v.text!=='__loading__')chatText+='[回答'+(f.answerVersions.length>1?'版本'+(j+1):'')+'] '+v.text+'\n'})}})}})}else{chatText=$('aiAnalysisContent').textContent||'（无）'}lines.push(chatText,'','--- 仅供参考 ---');const b=new Blob([lines.filter(Boolean).join('\n')],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='六爻卜筮_'+new Date().toISOString().slice(0,10)+'.txt';a.click();URL.revokeObjectURL(a.href)}
-function resetAll(){Object.assign(st,{step:0,category:'career',question:'',method:'coin',timeSource:'now',time:null,gender:'male',userName:'',coinTosses:[],tossCount:0,result:null,manualPan:null,manualGanzhi:null,aiSession:null,manualHexLines:null});$('questionInput').value='';showStep(0)}
+function resetAll(){Object.assign(st,{step:0,category:'career',question:'',method:'coin',timeSource:'now',time:null,gender:'male',userName:'',coinTosses:[],tossCount:0,result:null,manualPan:null,manualGanzhi:null,aiSession:null,manualHexLines:null,currentHistoryId:null});$('questionInput').value='';showStep(0)}
 
 // ===== 历史记录模块 =====
 const HISTORY_KEY='liuyao_history_v1';
@@ -1899,10 +1900,14 @@ function clearAllHistory(){
 function autoSaveHistoryRecord(){
   if(!st.result)return;
   var r=st.result;
+  var gz=st.manualGanzhi||r;
   var cn={career:'事业工作',wealth:'财运投资',love:'婚姻感情',health:'健康疾病',exam:'考试学业',legal:'官司诉讼',travel:'出行迁徙',other:'其他'};
-  var record={id:Date.now(),date:new Date().toLocaleString('zh-CN'),title:cn[st.category]||st.category,question:st.question||'',category:st.category,gender:st.gender||'unknown',method:st.method||'unknown',benGua:r.hexInfo?r.hexInfo.name:'未知',bianGua:r.changedHex?r.changedHex.name:'',huGua:r.huHex?r.huHex.name:'',palace:r.palace||'未知',movingLines:r.movingLines||[],lineBranches:r.lineBranches||[],lineRelatives:r.lineRelatives||[],shiPos:r.shiPos||0,yingPos:r.yingPos||0,yearStem:r.yearStem||'',yearBranch:r.yearBranch||'',monthStem:r.monthStem||'',monthBranch:r.monthBranch||'',dayStem:r.dayStem||'',dayBranch:r.dayBranch||'',notes:'',source:'auto'};
-  var lastAuto=historyRecords.find(function(x){return x.source==='auto'});
-  if(lastAuto&&record.benGua===lastAuto.benGua&&record.question===lastAuto.question&&Date.now()-lastAuto.id<5000)return;
+  var record={id:Date.now(),date:new Date().toLocaleString('zh-CN'),title:cn[st.category]||st.category,question:st.question||'',category:st.category,gender:st.gender||'unknown',method:st.method||'unknown',benGua:r.hexInfo?r.hexInfo.name:'未知',bianGua:r.changedHex?r.changedHex.name:'',huGua:r.huHex?r.huHex.name:'',palace:r.palace||'未知',movingLines:r.movingLines||[],lineBranches:st.manualPan?st.manualPan.lines.map(function(l){return l.branch}):(r.lineBranches||[]),lineRelatives:st.manualPan?st.manualPan.lines.map(function(l){return l.qin}):(r.lineRelatives||[]),shiPos:r.shiPos||0,yingPos:r.yingPos||0,yearStem:gz.yearStem||r.yearStem||'',yearBranch:gz.yearBranch||r.yearBranch||'',monthStem:gz.monthStem||r.monthStem||'',monthBranch:gz.monthBranch||r.monthBranch||'',dayStem:gz.dayStem||r.dayStem||'',dayBranch:gz.dayBranch||r.dayBranch||'',notes:'',source:'auto'};
+  if(st.currentHistoryId){
+    var existing=historyRecords.find(function(x){return x.id===st.currentHistoryId});
+    if(existing){Object.assign(existing,record);existing.id=st.currentHistoryId;saveHistoryRecords();return}
+  }
+  st.currentHistoryId=record.id;
   historyRecords.unshift(record);
   if(historyRecords.length>200)historyRecords=historyRecords.slice(0,200);
   saveHistoryRecords();
@@ -1971,7 +1976,7 @@ loadHistoryRecords();
   var origRender=renderResult;
   renderResult=function(result,isEdit){
     origRender.call(this,result,isEdit);
-    if(!isEdit)autoSaveHistoryRecord();
+    autoSaveHistoryRecord();
   };
 })();
 
